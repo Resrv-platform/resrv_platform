@@ -1,1 +1,47 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Resrv Client</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; height: 100%; overflow: hidden;
+    }
+    iframe {
+      border: none; width: 100%; height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <iframe id="appFrame" allow="fullscreen"></iframe>
 
+  <script>
+    const iframe = document.getElementById('appFrame');
+
+    function getPath() {
+      return window.location.pathname + window.location.search + window.location.hash;
+    }
+
+    // 1. Bij opstart → iframe naar juiste Bubble-pad sturen
+    function updateIframe() {
+      iframe.src = "https://rms.resrv.nl" + getPath();
+    }
+
+    // 2. Bij navigatie in browser → iframe updaten
+    window.addEventListener('popstate', updateIframe);
+
+    // 3. Luisteren naar navigatie vanuit Bubble (via postMessage)
+    window.addEventListener('message', (event) => {
+      if (event.origin !== 'https://rms.resrv.nl') return;
+      if (event.data.type === 'bubble:navigate') {
+        const newPath = event.data.path;
+        if (getPath() !== newPath) {
+          history.pushState({}, '', newPath);
+        }
+      }
+    });
+
+    updateIframe();
+  </script>
+</body>
+</html>
