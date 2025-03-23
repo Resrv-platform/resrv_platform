@@ -22,49 +22,54 @@
 
   <script>
     const iframe = document.getElementById('appFrame');
+    const base = "https://rms.resrv.nl/clientindex";
+    const client = "client=" + encodeURIComponent(window.location.hostname);
 
+    // ✅ Zet alle queryparams + hash om in een string
     function getFullPath() {
       return window.location.pathname + window.location.search + window.location.hash;
     }
 
-    function getClientParam() {
-      return "client=" + encodeURIComponent(window.location.hostname);
-    }
-
+    // ✅ Bouw volledige iframe src met client param
     function buildIframeUrl(path) {
-      const base = "https://rms.resrv.nl/clientindex";
-      const connector = path.includes("?") ? "&" : "?";
-      return base + path + connector + getClientParam();
+      const url = new URL(base + path, window.location.origin);
+      const existingParams = new URLSearchParams(url.search);
+
+      // Voeg client= toe (overschrijft als nodig)
+      existingParams.set("client", window.location.hostname);
+      url.search = existingParams.toString();
+
+      return url.href;
     }
 
+    // ✅ Initieel laden
     function updateIframeSrc() {
       iframe.src = buildIframeUrl(getFullPath());
     }
 
-    // 1. Initieel laden
     updateIframeSrc();
 
-    // 2. Terugknop / voorwaarts
+    // ✅ Navigatie: terugknop of Bubble stuurt nieuwe path
     window.addEventListener("popstate", updateIframeSrc);
 
-    // 3. Luister naar alle berichten van iframe
+    // ✅ Ontvang berichten van Bubble (navigatie & domein)
     window.addEventListener("message", (event) => {
       if (event.origin !== "https://rms.resrv.nl") return;
 
       const data = event.data;
 
-      // Navigatie vanuit Bubble
+      // Bubble navigeert intern
       if (data?.type === "bubble:navigate") {
         const newPath = data.path;
         const currentPath = getFullPath();
 
         if (newPath !== currentPath) {
-          history.pushState({}, '', newPath);
-          iframe.src = buildIframeUrl(newPath); // zorg dat iframe ook update
+          history.pushState({}, '', newPath); // update browser URL
+          iframe.src = buildIframeUrl(newPath); // update iframe URL
         }
       }
 
-      // Bubble vraagt naar client hostname
+      // Bubble vraagt om het client-domein
       if (data?.type === "bubble:request-origin") {
         iframe.contentWindow.postMessage({
           type: "client:domain",
