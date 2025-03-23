@@ -1,1 +1,11 @@
+# Certbot bestanden
+certbot/*
 
+# Logs / caches
+*.log
+*.swp
+
+# Editor bestanden
+*.DS_Store
+.idea/
+.vscode/
