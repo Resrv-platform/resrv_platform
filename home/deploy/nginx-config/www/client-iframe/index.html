@@ -45,6 +45,17 @@
         }
       }
     });
+
+    window.addEventListener("message", (event) => {
+  // (Bestaande bubble:navigate check blijft zoals die is)
+
+  if (event.data?.type === "bubble:request-origin") {
+    iframe.contentWindow.postMessage({
+      type: "client:domain",
+      domain: window.location.hostname
+    }, "*");
+  }
+});
   </script>
 </body>
 </html>
