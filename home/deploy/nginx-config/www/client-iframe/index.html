@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="UTF-8" />
-  <title>Resrv Client</title>
+  <title>Clientomgeving</title>
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; overflow: hidden;
@@ -18,30 +18,33 @@
   <script>
     const iframe = document.getElementById('appFrame');
 
-    function getPath() {
+    function getFullPath() {
       return window.location.pathname + window.location.search + window.location.hash;
     }
 
-    // 1. Bij opstart → iframe naar juiste Bubble-pad sturen
-    function updateIframe() {
-      iframe.src = "https://rms.resrv.nl" + getPath();
+    function updateIframeSrc() {
+      iframe.src = "https://rms.resrv.nl" + getFullPath();
     }
 
-    // 2. Bij navigatie in browser → iframe updaten
-    window.addEventListener('popstate', updateIframe);
+    // 1. Laad juiste pagina bij openen
+    updateIframeSrc();
 
-    // 3. Luisteren naar navigatie vanuit Bubble (via postMessage)
-    window.addEventListener('message', (event) => {
-      if (event.origin !== 'https://rms.resrv.nl') return;
-      if (event.data.type === 'bubble:navigate') {
+    // 2. Browser-back / forward
+    window.addEventListener("popstate", updateIframeSrc);
+
+    // 3. Ontvang navigatieverzoeken vanuit iframe
+    window.addEventListener("message", (event) => {
+      if (event.origin !== "https://rms.resrv.nl") return;
+
+      if (event.data?.type === "bubble:navigate") {
         const newPath = event.data.path;
-        if (getPath() !== newPath) {
+        const currentPath = getFullPath();
+
+        if (newPath !== currentPath) {
           history.pushState({}, '', newPath);
         }
       }
     });
-
-    updateIframe();
   </script>
 </body>
 </html>
