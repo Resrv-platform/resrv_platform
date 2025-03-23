@@ -9,6 +9,30 @@
   <script>window.clientportal_debug = true;</script>
 
   <!-- Routing Script -->
+<script>
+  const formdata = new FormData();
+formdata.append("client_domain", window.location.hostname); // auto detect domain
+
+const requestOptions = {
+  method: "POST",
+  body: formdata,
+  redirect: "follow"
+};
+
+fetch("https://rms.resrv.nl/api/1.1/wf/get_domain", requestOptions)
+  .then((response) => response.json()) // Assuming Bubble returns structured JSON
+  .then((data) => {
+    console.log("Received from Bubble:", data);
+
+    if (data.redirect_url) {
+      const iframe = document.getElementById("clientportal_iframe");
+      iframe.src = data.redirect_url + "&clientside_routing=true";
+    }
+  })
+  .catch((error) => console.error("API error:", error));
+</script>
+  
+  
   <script id="clientportal_router"
     data-base-path-to="/indexclient"
     data-base-path-from="/">
