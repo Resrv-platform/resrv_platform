@@ -60,14 +60,17 @@
 
       // Bubble navigeert intern
       if (data?.type === "bubble:navigate") {
-        const newPath = data.path;
-        const currentPath = getFullPath();
+  let newPath = data.path;
+  const currentPath = getFullPath();
 
-        if (newPath !== currentPath) {
-          history.pushState({}, '', newPath); // update browser URL
-          iframe.src = buildIframeUrl(newPath); // update iframe URL
-        }
-      }
+  // 👇 Detect if Bubble navigates to /indexclient → replace with /
+  const browserPath = newPath === "/indexclient" ? "/" : newPath;
+
+  if (browserPath !== currentPath) {
+    history.pushState({}, '', browserPath); // update browser URL to clean version
+    iframe.src = buildIframeUrl(newPath);   // iframe still loads /indexclient
+  }
+}
 
       // Bubble vraagt om het client-domein
       if (data?.type === "bubble:request-origin") {
