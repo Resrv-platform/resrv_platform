@@ -5,7 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Your client portal powered by RESRV">
-
   <link rel="icon" href="https://rms.resrv.nl/favicon.ico" />
   <script>window.clientportal_debug = true;</script>
 
@@ -17,7 +16,7 @@
       const routerScript = document.getElementById("clientportal_router");
       const basePathTo = routerScript.getAttribute("data-base-path-to") || "/";
       const basePathFrom = routerScript.getAttribute("data-base-path-from") || "/";
-      let lastUrl = window.location.href.replace(window.location.origin, "");
+      let lastUrl = window.location.pathname + window.location.search + window.location.hash;
 
       function debugLog(...args) {
         if (window.clientportal_debug) console.log("[clientportal]", ...args);
@@ -84,13 +83,31 @@
           }
         }
       }
+
+      // On page load: update iframe src based on browser path
+      window.addEventListener("DOMContentLoaded", () => {
+        const path = window.location.pathname + window.location.search + window.location.hash;
+        const iframe = document.getElementById("clientportal_iframe");
+        const url = "https://rms.resrv.nl" + path + (path.includes("?") ? "&" : "?") + "clientside_routing=true";
+        iframe.src = url;
+        debugLog("Set initial iframe src to:", url);
+      });
+
+      // On browser back/forward: update iframe src too
+      window.addEventListener("popstate", () => {
+        const path = window.location.pathname + window.location.search + window.location.hash;
+        const iframe = document.getElementById("clientportal_iframe");
+        const url = "https://rms.resrv.nl" + path + (path.includes("?") ? "&" : "?") + "clientside_routing=true";
+        iframe.src = url;
+        debugLog("Updated iframe src (back/forward) to:", url);
+      });
     })();
   </script>
 </head>
 <body>
   <iframe
     id="clientportal_iframe"
-    src="https://rms.resrv.nl/login?clientside_routing=true"
+    src=""
     style="position:fixed; top:0; left:0; bottom:0; right:0; width:100%; height:100%; border:none; margin:0; padding:0; overflow:hidden; z-index:999999;"
     allow="fullscreen"
   >
