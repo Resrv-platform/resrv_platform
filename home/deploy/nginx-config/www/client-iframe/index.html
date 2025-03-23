@@ -23,8 +23,14 @@
     }
 
     function updateIframeSrc() {
-      iframe.src = "https://rms.resrv.nl" + getFullPath();
-    }
+  const base = "https://rms.resrv.nl/clientindex";
+  const fullPath = window.location.pathname + window.location.search + window.location.hash;
+  const clientParam = "client=" + encodeURIComponent(window.location.hostname);
+
+  // Voeg toe aan bestaande query of begin er een
+  let connector = fullPath.includes("?") ? "&" : "?";
+  iframe.src = base + fullPath + connector + clientParam;
+}
 
     // 1. Laad juiste pagina bij openen
     updateIframeSrc();
