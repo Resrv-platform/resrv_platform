@@ -16,6 +16,23 @@
       height: 100%;
     }
   </style>
+
+  <script>
+  const clientDomain = window.location.hostname;
+
+  fetch("https://rms.resrv.nl/version-test/api/1.1/wf/receive-domain", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ domain: clientDomain })
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log("Domain sent to Bubble:", clientDomain);
+  })
+  .catch(err => console.error("Failed to send domain:", err));
+</script>
 </head>
 <body>
   <iframe id="appFrame" allow="fullscreen"></iframe>
