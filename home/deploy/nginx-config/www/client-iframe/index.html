@@ -110,12 +110,16 @@ fetch("https://rms.resrv.nl/api/1.1/wf/get_domain", requestOptions)
 
       // On page load: update iframe src based on browser path
       window.addEventListener("DOMContentLoaded", () => {
-        const path = window.location.pathname + window.location.search + window.location.hash;
-        const iframe = document.getElementById("clientportal_iframe");
-        const url = "https://rms.resrv.nl" + path + (path.includes("?") ? "&" : "?") + "clientside_routing=true";
-        iframe.src = url;
-        debugLog("Set initial iframe src to:", url);
-      });
+  const path = window.location.pathname + window.location.search + window.location.hash;
+  const iframe = document.getElementById("clientportal_iframe");
+
+  // Set indexclient as homepage if user visits root
+  const basePath = path === "/" ? "/indexclient" : path;
+
+  const url = "https://rms.resrv.nl" + basePath + (basePath.includes("?") ? "&" : "?") + "clientside_routing=true";
+  iframe.src = url;
+  debugLog("Set initial iframe src to:", url);
+});
 
       // On browser back/forward: update iframe src too
       window.addEventListener("popstate", () => {
