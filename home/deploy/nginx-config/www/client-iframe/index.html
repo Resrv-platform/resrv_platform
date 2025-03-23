@@ -1,102 +1,100 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Clientomgeving</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-    }
-    iframe {
-      border: none;
-      width: 100%;
-      height: 100%;
-    }
-  </style>
+  <title>Client Portal</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Your client portal powered by RESRV">
 
-  <script>
-  const clientDomain = window.location.hostname;
+  <link rel="icon" href="https://rms.resrv.nl/favicon.ico" />
+  <script>window.clientportal_debug = true;</script>
 
-  fetch("https://rms.resrv.nl/version-test/api/1.1/wf/receive-domain", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ domain: clientDomain })
-  })
-  .then(res => res.json())
-  .then(data => {
-    console.log("Domain sent to Bubble:", clientDomain);
-  })
-  .catch(err => console.error("Failed to send domain:", err));
-</script>
+  <!-- Routing Script -->
+  <script id="clientportal_router"
+    data-base-path-to="/indexclient"
+    data-base-path-from="/">
+    (function () {
+      const routerScript = document.getElementById("clientportal_router");
+      const basePathTo = routerScript.getAttribute("data-base-path-to") || "/";
+      const basePathFrom = routerScript.getAttribute("data-base-path-from") || "/";
+      let lastUrl = window.location.href.replace(window.location.origin, "");
+
+      function debugLog(...args) {
+        if (window.clientportal_debug) console.log("[clientportal]", ...args);
+      }
+
+      window.addEventListener("message", (event) => {
+        const data = event.data;
+
+        if (data?.type === "clientportal:navigate") {
+          const newPath = data.path;
+          if (newPath !== lastUrl) {
+            const action = clientportalClientSideRouter(basePathTo, basePathFrom, newPath, lastUrl);
+            if (action.action === "replace") {
+              history.replaceState({}, "", action.url);
+              lastUrl = newPath;
+              debugLog("URL updated:", action.url);
+            }
+          }
+        }
+
+        if (data?.clientportal?.meta) {
+          clientportalChangeMeta(data.clientportal.meta);
+        }
+      });
+
+      function clientportalClientSideRouter(toPath, fromPath, newUrl, oldUrl) {
+        try {
+          const cleanNewUrl = newUrl.split("?")[0];
+          const queryParams = new URLSearchParams(newUrl.split("?")[1] || "");
+          queryParams.delete("clientside_routing");
+
+          let transformedUrl = cleanNewUrl;
+          if (toPath !== "/") transformedUrl = transformedUrl.replace(toPath, fromPath);
+          if (queryParams.toString()) {
+            transformedUrl += "?" + queryParams.toString();
+          }
+
+          if (oldUrl !== transformedUrl) {
+            return { action: "replace", url: transformedUrl };
+          }
+        } catch (err) {
+          debugLog("Routing error:", err.message);
+        }
+
+        return { action: "none", url: null };
+      }
+
+      function clientportalChangeMeta(meta) {
+        if (meta.documentTitle) document.title = meta.documentTitle;
+        if (meta.description) {
+          const desc = document.querySelector("meta[name='description']");
+          if (desc) desc.setAttribute("content", meta.description);
+        }
+        if (meta.openGraphMetaTags) {
+          for (const [property, content] of Object.entries(meta.openGraphMetaTags)) {
+            const tag = document.querySelector(`meta[property="${property}"]`);
+            if (tag && content) tag.setAttribute("content", content);
+          }
+        }
+        if (meta.linkTypes) {
+          for (const [rel, href] of Object.entries(meta.linkTypes)) {
+            const link = document.querySelector(`link[rel="${rel}"]`);
+            if (link && href) link.setAttribute("href", href);
+          }
+        }
+      }
+    })();
+  </script>
 </head>
 <body>
-  <iframe id="appFrame" allow="fullscreen"></iframe>
-
-  <script>
-    const iframe = document.getElementById('appFrame');
-    const base = "https://rms.resrv.nl/clientindex";
-    const client = "client=" + encodeURIComponent(window.location.hostname);
-
-    // ✅ Zet alle queryparams + hash om in een string
-    function getFullPath() {
-      return window.location.pathname + window.location.search + window.location.hash;
-    }
-
-    // ✅ Bouw volledige iframe src met client param
-    function buildIframeUrl(path) {
-      const url = new URL(base + path, window.location.origin);
-      const existingParams = new URLSearchParams(url.search);
-
-      // Voeg client= toe (overschrijft als nodig)
-      existingParams.set("client", window.location.hostname);
-      url.search = existingParams.toString();
-
-      return url.href;
-    }
-
-    // ✅ Initieel laden
-    function updateIframeSrc() {
-      iframe.src = buildIframeUrl(getFullPath());
-    }
-
-    updateIframeSrc();
-
-    // ✅ Navigatie: terugknop of Bubble stuurt nieuwe path
-    window.addEventListener("popstate", updateIframeSrc);
-
-    // ✅ Ontvang berichten van Bubble (navigatie & domein)
-    window.addEventListener("message", (event) => {
-      if (event.origin !== "https://rms.resrv.nl") return;
-
-      const data = event.data;
-
-      // Bubble navigeert intern
-      if (data?.type === "bubble:navigate") {
-  let newPath = data.path;
-  const currentPath = getFullPath();
-
-  // 👇 Detect if Bubble navigates to /indexclient → replace with /
-  const browserPath = newPath === "/indexclient" ? "/" : newPath;
-
-  if (browserPath !== currentPath) {
-    history.pushState({}, '', browserPath); // update browser URL to clean version
-    iframe.src = buildIframeUrl(newPath);   // iframe still loads /indexclient
-  }
-}
-
-      // Bubble vraagt om het client-domein
-      if (data?.type === "bubble:request-origin") {
-        iframe.contentWindow.postMessage({
-          type: "client:domain",
-          domain: window.location.hostname
-        }, "*");
-      }
-    });
-  </script>
+  <iframe
+    id="clientportal_iframe"
+    src="https://rms.resrv.nl/login?clientside_routing=true"
+    style="position:fixed; top:0; left:0; bottom:0; right:0; width:100%; height:100%; border:none; margin:0; padding:0; overflow:hidden; z-index:999999;"
+    allow="fullscreen"
+  >
+    Your browser doesn't support iframes.
+  </iframe>
 </body>
 </html>
