@@ -5,10 +5,15 @@
   <title>Clientomgeving</title>
   <style>
     html, body {
-      margin: 0; padding: 0; height: 100%; overflow: hidden;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
     }
     iframe {
-      border: none; width: 100%; height: 100%;
+      border: none;
+      width: 100%;
+      height: 100%;
     }
   </style>
 </head>
@@ -22,46 +27,51 @@
       return window.location.pathname + window.location.search + window.location.hash;
     }
 
+    function getClientParam() {
+      return "client=" + encodeURIComponent(window.location.hostname);
+    }
+
+    function buildIframeUrl(path) {
+      const base = "https://rms.resrv.nl/clientindex";
+      const connector = path.includes("?") ? "&" : "?";
+      return base + path + connector + getClientParam();
+    }
+
     function updateIframeSrc() {
-  const base = "https://rms.resrv.nl/clientindex";
-  const fullPath = window.location.pathname + window.location.search + window.location.hash;
-  const clientParam = "client=" + encodeURIComponent(window.location.hostname);
+      iframe.src = buildIframeUrl(getFullPath());
+    }
 
-  // Voeg toe aan bestaande query of begin er een
-  let connector = fullPath.includes("?") ? "&" : "?";
-  iframe.src = base + fullPath + connector + clientParam;
-}
-
-    // 1. Laad juiste pagina bij openen
+    // 1. Initieel laden
     updateIframeSrc();
 
-    // 2. Browser-back / forward
+    // 2. Terugknop / voorwaarts
     window.addEventListener("popstate", updateIframeSrc);
 
-    // 3. Ontvang navigatieverzoeken vanuit iframe
+    // 3. Luister naar alle berichten van iframe
     window.addEventListener("message", (event) => {
       if (event.origin !== "https://rms.resrv.nl") return;
 
-      if (event.data?.type === "bubble:navigate") {
-        const newPath = event.data.path;
+      const data = event.data;
+
+      // Navigatie vanuit Bubble
+      if (data?.type === "bubble:navigate") {
+        const newPath = data.path;
         const currentPath = getFullPath();
 
         if (newPath !== currentPath) {
           history.pushState({}, '', newPath);
+          iframe.src = buildIframeUrl(newPath); // zorg dat iframe ook update
         }
       }
+
+      // Bubble vraagt naar client hostname
+      if (data?.type === "bubble:request-origin") {
+        iframe.contentWindow.postMessage({
+          type: "client:domain",
+          domain: window.location.hostname
+        }, "*");
+      }
     });
-
-    window.addEventListener("message", (event) => {
-  // (Bestaande bubble:navigate check blijft zoals die is)
-
-  if (event.data?.type === "bubble:request-origin") {
-    iframe.contentWindow.postMessage({
-      type: "client:domain",
-      domain: window.location.hostname
-    }, "*");
-  }
-});
   </script>
 </body>
 </html>
