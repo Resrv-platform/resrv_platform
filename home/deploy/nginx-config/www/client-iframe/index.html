@@ -2,37 +2,79 @@
 <html lang="en">
 <head>
   <title>Client Portal</title>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Your client portal powered by RESRV">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Your client portal powered by RESRV" />
   <link rel="icon" href="https://rms.resrv.nl/favicon.ico" />
   <script>window.clientportal_debug = true;</script>
 
-  <!-- Routing Script -->
-<script>
-  const formdata = new FormData();
-formdata.append("client_domain", window.location.hostname); // auto detect domain
+  <!-- Routing Script + Meta via API -->
+  <script>
+    const formdata = new FormData();
+    formdata.append("client_domain", window.location.hostname); // auto detect domain
 
-const requestOptions = {
-  method: "POST",
-  body: formdata,
-  redirect: "follow"
-};
+    const requestOptions = {
+      method: "POST",
+      body: formdata,
+      redirect: "follow"
+    };
 
-fetch("https://rms.resrv.nl/api/1.1/wf/get_domain", requestOptions)
-  .then((response) => response.json()) // Assuming Bubble returns structured JSON
-  .then((data) => {
-    console.log("Received from Bubble:", data);
+    fetch("https://rms.resrv.nl/api/1.1/wf/get_domain", requestOptions)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Received from Bubble:", data);
 
-    if (data.redirect_url) {
-      const iframe = document.getElementById("clientportal_iframe");
-      iframe.src = data.redirect_url + "&clientside_routing=true";
+        if (data.redirect_url) {
+          const iframe = document.getElementById("clientportal_iframe");
+          iframe.src = data.redirect_url + "&clientside_routing=true";
+
+          // Update meta info if present
+          if (data.meta) {
+            clientportalChangeMeta(data.meta);
+          }
+        }
+      })
+      .catch((error) => console.error("API error:", error));
+
+    function clientportalChangeMeta(meta) {
+      if (meta.documentTitle) document.title = meta.documentTitle;
+
+      if (meta.description) {
+        let desc = document.querySelector("meta[name='description']");
+        if (!desc) {
+          desc = document.createElement("meta");
+          desc.setAttribute("name", "description");
+          document.head.appendChild(desc);
+        }
+        desc.setAttribute("content", meta.description);
+      }
+
+      if (meta.openGraphMetaTags) {
+        for (const [property, content] of Object.entries(meta.openGraphMetaTags)) {
+          let tag = document.querySelector(`meta[property="${property}"]`);
+          if (!tag) {
+            tag = document.createElement("meta");
+            tag.setAttribute("property", property);
+            document.head.appendChild(tag);
+          }
+          tag.setAttribute("content", content);
+        }
+      }
+
+      if (meta.linkTypes) {
+        for (const [rel, href] of Object.entries(meta.linkTypes)) {
+          let link = document.querySelector(`link[rel="${rel}"]`);
+          if (!link) {
+            link = document.createElement("link");
+            link.setAttribute("rel", rel);
+            document.head.appendChild(link);
+          }
+          link.setAttribute("href", href);
+        }
+      }
     }
-  })
-  .catch((error) => console.error("API error:", error));
-</script>
-  
-  
+  </script>
+
   <script id="clientportal_router"
     data-base-path-to="/indexclient"
     data-base-path-from="/">
@@ -87,48 +129,6 @@ fetch("https://rms.resrv.nl/api/1.1/wf/get_domain", requestOptions)
 
         return { action: "none", url: null };
       }
-
-      function clientportalChangeMeta(meta) {
-        if (meta.documentTitle) document.title = meta.documentTitle;
-        if (meta.description) {
-          const desc = document.querySelector("meta[name='description']");
-          if (desc) desc.setAttribute("content", meta.description);
-        }
-        if (meta.openGraphMetaTags) {
-          for (const [property, content] of Object.entries(meta.openGraphMetaTags)) {
-            const tag = document.querySelector(`meta[property="${property}"]`);
-            if (tag && content) tag.setAttribute("content", content);
-          }
-        }
-        if (meta.linkTypes) {
-          for (const [rel, href] of Object.entries(meta.linkTypes)) {
-            const link = document.querySelector(`link[rel="${rel}"]`);
-            if (link && href) link.setAttribute("href", href);
-          }
-        }
-      }
-
-      // On page load: update iframe src based on browser path
-      window.addEventListener("DOMContentLoaded", () => {
-  const path = window.location.pathname + window.location.search + window.location.hash;
-  const iframe = document.getElementById("clientportal_iframe");
-
-  // Set indexclient as homepage if user visits root
-  const basePath = path === "/" ? "/indexclient" : path;
-
-  const url = "https://rms.resrv.nl" + basePath + (basePath.includes("?") ? "&" : "?") + "clientside_routing=true";
-  iframe.src = url;
-  debugLog("Set initial iframe src to:", url);
-});
-
-      // On browser back/forward: update iframe src too
-      window.addEventListener("popstate", () => {
-        const path = window.location.pathname + window.location.search + window.location.hash;
-        const iframe = document.getElementById("clientportal_iframe");
-        const url = "https://rms.resrv.nl" + path + (path.includes("?") ? "&" : "?") + "clientside_routing=true";
-        iframe.src = url;
-        debugLog("Updated iframe src (back/forward) to:", url);
-      });
     })();
   </script>
 </head>
